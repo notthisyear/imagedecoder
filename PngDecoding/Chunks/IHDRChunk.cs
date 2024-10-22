@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using ImageDecoder.Common;
+using static ImageDecoder.Common.Utilities;
+using static ImageDecoder.Common.Iso3309Crc32;
 
 namespace ImageDecoder.PngDecoding.Chunks
 {
@@ -75,11 +77,13 @@ namespace ImageDecoder.PngDecoding.Chunks
 
         public InterlaceMethod Interlace { get; private set; }
         #endregion
-        
+
+        private const int ChunkNumberOfBytes = 13;
+
         public override void DecodeChunk(ReadOnlySpan<byte> data)
         {
-            if (Length < 13)
-                throw new PngDecodingException($"IHDR chunk to short - expected at least 13 bytes, got {Length}");
+            if (Length < ChunkNumberOfBytes)
+                throw new PngDecodingException($"IHDR chunk has incorrect length - expected {ChunkNumberOfBytes} bytes, got {Length}");
             
             Width = data[0..4].ReadUInt32();
             Height = data[4..8].ReadUInt32();
@@ -97,5 +101,27 @@ namespace ImageDecoder.PngDecoding.Chunks
 
         public override string ToString()
             => $"IHDR chunk ({Width} x {Height}, {BitDepth} bps/bppi, {Color}, {Compression}, {Filter}, {Interlace})";
+
+        protected override uint EncodeChunkTypeAndData(FileStream fs)
+        {
+            Span<byte> chunkTypeAndData = new(new byte[4 + ChunkNumberOfBytes]);
+            attributes.ChunkId.AsSpan(ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
+
+            var byteIdx = 4;
+            Width.AsSpan().CopyTo(chunkTypeAndData[byteIdx..]);
+            byteIdx += 4;
+
+            Height.AsSpan().CopyTo(chunkTypeAndData[byteIdx..]);
+            byteIdx += 4;
+
+            chunkTypeAndData[byteIdx++] = BitDepth;
+            chunkTypeAndData[byteIdx++] = (byte)Color;
+            chunkTypeAndData[byteIdx++] = (byte)Compression;
+            chunkTypeAndData[byteIdx++] = (byte)Filter;
+            chunkTypeAndData[byteIdx] = (byte)Interlace;
+
+            fs.Write(chunkTypeAndData);
+            return CalculateCrc(chunkTypeAndData);
+        }
     }
 }

@@ -1,7 +1,9 @@
+using ImageDecoder.Common;
 using System;
 using System.IO;
 using System.Text;
-using ImageDecoder.Common;
+using static ImageDecoder.Common.Iso3309Crc32;
+using static ImageDecoder.Common.Utilities;
 
 namespace ImageDecoder.PngDecoding.Chunks
 {
@@ -24,7 +26,12 @@ namespace ImageDecoder.PngDecoding.Chunks
         public Chunk(uint length, ChunkType chunkType, ChunkAttributes attributes, PngFile file, BinaryReader reader)
         {
             var data = new ReadOnlySpan<byte>(length == 0 ? [] : reader.ReadBytes((int)length));
-            IsValid = CheckCrc(reader.ReadBytes(CrcNumberOfBytes));
+            
+            Span<byte> chunkTypeAndData = new(new byte[4 + data.Length]);
+            attributes.ChunkId.AsSpan(ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
+            data.CopyTo(chunkTypeAndData[4..]);
+            
+            IsValid = VerifyCrc(chunkTypeAndData, Utilities.ReadUInt32(reader.ReadBytes(CrcNumberOfBytes)));
             if (!IsValid)
                 throw new PngDecodingException("CRC check failed - chunk is corrupt");
             
@@ -73,29 +80,25 @@ namespace ImageDecoder.PngDecoding.Chunks
         {
             // Write header
             Length.WriteUInt32(fs);
-            var (attr, _) = ChunkType.GetCustomAttributeFromEnum<ChunkTypeAttribute>();
-            attr!.ChunkId.WriteUInt32(fs);
 
             // Write content
-            EncodeChunkData(fs);
+            var crc = EncodeChunkTypeAndData(fs);
 
             // Write CRC
-            ((uint)0).WriteUInt32(fs);
+            crc.WriteUInt32(fs);
         }
 
-        protected virtual void EncodeChunkData(FileStream fs) { return; }
+        protected virtual uint EncodeChunkTypeAndData(FileStream fs)
+        {
+            Attributes.ChunkId.WriteUInt32(fs, ByteOrder.LittleEndian);
+            return CalculateCrc(Attributes.ChunkId.AsSpan(ByteOrder.LittleEndian));
+        }
         
         protected static T GetValueFromByte<T>(byte b) where T : Enum
         {
             if (!Utilities.TryGetAsEnum(b, out T? t))
                 throw new PngDecodingException($"Unexpected {typeof(T).Name} value '{b}'");
             return t!;
-        }
-
-        private bool CheckCrc(ReadOnlySpan<byte> crc)
-        {
-            // TODO: Figure out
-            return true;
         }
     }
 }

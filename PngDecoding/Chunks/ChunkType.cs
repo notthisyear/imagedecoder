@@ -24,7 +24,7 @@ namespace ImageDecoder.PngDecoding.Chunks
 
     }
 
-    internal record ChunkAttributes(bool IsCritical, bool IsPublic, bool IsSafeToCopy);
+    internal record ChunkAttributes(uint ChunkId, bool IsCritical, bool IsPublic, bool IsSafeToCopy);
 
     
     [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
@@ -69,7 +69,7 @@ namespace ImageDecoder.PngDecoding.Chunks
         }
 
         public static ChunkAttributes GetChunkAttributes(ReadOnlySpan<byte> bytes)
-            => new(!IsLower(bytes[0]), !IsLower(bytes[1]), IsLower(bytes[3]));
+            => new(bytes.ReadUInt32(ByteOrder.LittleEndian), !IsLower(bytes[0]), !IsLower(bytes[1]), IsLower(bytes[3]));
         
         private static bool IsLower(byte b)
             => (b & 0x20) == 0x20;     

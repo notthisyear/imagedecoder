@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using ImageDecoder.Common;
 using ImageDecoder.PngDecoding.Chunks;

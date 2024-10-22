@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
@@ -53,16 +52,28 @@ namespace ImageDecoder.Common
             byte shift = byteOrder == ByteOrder.BigEndian ? (byte)24 : (byte)0;
             int change = byteOrder == ByteOrder.BigEndian ? -8 : 8;
             
-            Debug.WriteLine($"value is: {value}");
             for (var i = 0; i < 4; i++)
             {
-                var v = (byte)(value & ((uint)0xFF << shift));
-                Debug.WriteLine($"value {i}: {v}");
+                var v = (byte)((value & ((uint)0xff << shift)) >> shift);
                 fs.WriteByte(v);
                 shift = (byte)(shift + change);
             }
         }
 
+        public static Span<byte> AsSpan(this uint value, ByteOrder byteOrder = ByteOrder.BigEndian)
+        {
+            byte shift = byteOrder == ByteOrder.BigEndian ? (byte)24 : (byte)0;
+            int change = byteOrder == ByteOrder.BigEndian ? -8 : 8;
+
+            Span<byte> span = new(new byte[4]);
+            for (var i = 0; i < 4; i++)
+            {
+                span[i] = (byte)((value & ((uint)0xff << shift)) >> shift);
+                shift = (byte)(shift + change);
+            }
+            return span;
+
+        }
         public static bool TryGetAsEnum<TIn, TOut>(TIn v, out TOut? enumValue) where TOut : Enum
         {
             enumValue = default;
