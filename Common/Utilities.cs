@@ -74,6 +74,7 @@ namespace ImageDecoder.Common
             return span;
 
         }
+
         public static bool TryGetAsEnum<TIn, TOut>(TIn v, out TOut? enumValue) where TOut : Enum
         {
             enumValue = default;

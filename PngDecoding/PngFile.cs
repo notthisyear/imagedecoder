@@ -1,8 +1,8 @@
+using ImageDecoder.Common;
+using ImageDecoder.PngDecoding.Chunks;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using ImageDecoder.Common;
-using ImageDecoder.PngDecoding.Chunks;
 
 namespace ImageDecoder.PngDecoding
 {

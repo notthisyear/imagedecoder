@@ -2,8 +2,6 @@ using ImageDecoder.Common;
 using System;
 using System.IO;
 using System.Text;
-using static ImageDecoder.Common.Iso3309Crc32;
-using static ImageDecoder.Common.Utilities;
 
 namespace ImageDecoder.PngDecoding.Chunks
 {
@@ -23,15 +21,15 @@ namespace ImageDecoder.PngDecoding.Chunks
         
         protected PngFile File { get; }
 
-        public Chunk(uint length, ChunkType chunkType, ChunkAttributes attributes, PngFile file, BinaryReader reader)
+        protected Chunk(uint length, ChunkType chunkType, ChunkAttributes attributes, PngFile file, BinaryReader reader)
         {
             var data = new ReadOnlySpan<byte>(length == 0 ? [] : reader.ReadBytes((int)length));
             
             Span<byte> chunkTypeAndData = new(new byte[4 + data.Length]);
-            attributes.ChunkId.AsSpan(ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
+            attributes.ChunkId.AsSpan(Utilities.ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
             data.CopyTo(chunkTypeAndData[4..]);
             
-            IsValid = VerifyCrc(chunkTypeAndData, Utilities.ReadUInt32(reader.ReadBytes(CrcNumberOfBytes)));
+            IsValid = Iso3309Crc32.VerifyCrc(chunkTypeAndData, Utilities.ReadUInt32(reader.ReadBytes(CrcNumberOfBytes)));
             if (!IsValid)
                 throw new PngDecodingException("CRC check failed - chunk is corrupt");
             
@@ -79,7 +77,8 @@ namespace ImageDecoder.PngDecoding.Chunks
         public void EncodeChunk(FileStream fs)
         {
             // Write header
-            Length.WriteUInt32(fs);
+            if (ChunkType != ChunkType.IDAT)
+                Length.WriteUInt32(fs);
 
             // Write content
             var crc = EncodeChunkTypeAndData(fs);
@@ -90,8 +89,8 @@ namespace ImageDecoder.PngDecoding.Chunks
 
         protected virtual uint EncodeChunkTypeAndData(FileStream fs)
         {
-            Attributes.ChunkId.WriteUInt32(fs, ByteOrder.LittleEndian);
-            return CalculateCrc(Attributes.ChunkId.AsSpan(ByteOrder.LittleEndian));
+            Attributes.ChunkId.WriteUInt32(fs, Utilities.ByteOrder.LittleEndian);
+            return Iso3309Crc32.CalculateCrc(Attributes.ChunkId.AsSpan(Utilities.ByteOrder.LittleEndian));
         }
         
         protected static T GetValueFromByte<T>(byte b) where T : Enum

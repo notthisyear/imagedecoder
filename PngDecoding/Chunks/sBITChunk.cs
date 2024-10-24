@@ -2,8 +2,6 @@ using ImageDecoder.Common;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using static ImageDecoder.Common.Iso3309Crc32;
-using static ImageDecoder.Common.Utilities;
 
 namespace ImageDecoder.PngDecoding.Chunks
 {
@@ -77,7 +75,7 @@ namespace ImageDecoder.PngDecoding.Chunks
             var dataLength = GetExpectedLengthForColorType(headerChunk.Color);
             
             Span<byte> chunkTypeAndData = new(new byte[4 + dataLength]);
-            attributes.ChunkId.AsSpan(ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
+            Attributes.ChunkId.AsSpan(Utilities.ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
 
             var byteIdx = 4;
             switch (headerChunk.Color)
@@ -112,7 +110,7 @@ namespace ImageDecoder.PngDecoding.Chunks
             }
 
             fs.Write(chunkTypeAndData);
-            return CalculateCrc(chunkTypeAndData);
+            return Iso3309Crc32.CalculateCrc(chunkTypeAndData);
         }
 
         private void AssertDataLength(int actualLength)

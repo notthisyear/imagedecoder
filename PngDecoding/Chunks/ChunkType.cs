@@ -1,6 +1,6 @@
+using ImageDecoder.Common;
 using System;
 using System.Text;
-using ImageDecoder.Common;
 using static ImageDecoder.Common.Utilities;
 
 namespace ImageDecoder.PngDecoding.Chunks

@@ -1,7 +1,7 @@
 ﻿
 
-using System;
 using ImageDecoder.PngDecoding;
+using System;
 
 namespace ImageDecoder
 {
@@ -10,7 +10,7 @@ namespace ImageDecoder
         public static void Main(string[] args)
         {
             if (args.Length == 0)
-                args = ["image.png"];
+                args = ["image2.png"];
 
             var imageToRead = args[0];
             Console.WriteLine($"Decoding file '{imageToRead}'...");

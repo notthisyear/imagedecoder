@@ -1,9 +1,8 @@
+using ImageDecoder.Common;
 using System;
 using System.IO;
 using System.IO.Compression;
-using ImageDecoder.Common;
 using static ImageDecoder.Common.Utilities;
-using static ImageDecoder.Common.Iso3309Crc32;
 
 namespace ImageDecoder.PngDecoding.Chunks
 {
@@ -14,31 +13,37 @@ namespace ImageDecoder.PngDecoding.Chunks
 
         public override void DecodeChunk(ReadOnlySpan<byte> data)
         {
-            var headerChunk = File.TryGetChunkOfType<IHDRChunk>(ChunkType.IHDR);
-            if (headerChunk == default)
-                throw new PngDecodingException("Could not get IHDR section");
-
-            if (headerChunk.Compression == IHDRChunk.CompressionMethod.Deflate)
-            {
-                using var decompressedStream = new MemoryStream();
-                // Note: The data is gzip compressed, so we skip the first
-                //       two bytes to get the underlying DEFLATE stream
-                using var decompressor =
-                    new DeflateStream(
-                        new MemoryStream(data[2..].ToArray()),
-                        CompressionMode.Decompress);
-                decompressor.CopyTo(decompressedStream);
-                _data = decompressedStream.ToArray();
-            }
+            ZLibUtilities.ValidateZLibHeader(data);
+            using var decompressedStream = new MemoryStream();
+            using var decompressor =
+                new DeflateStream(
+                    new MemoryStream(data[ZLibUtilities.ZLibHeaderNumberOfBytes..].ToArray()),
+                    CompressionMode.Decompress);
+            decompressor.CopyTo(decompressedStream);
+            _data = decompressedStream.ToArray();
         }
 
         protected override uint EncodeChunkTypeAndData(FileStream fs)
         {
-            Span<byte> chunkTypeAndData = new(new byte[4 + _data.Length]);
-            attributes.ChunkId.AsSpan(ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
-            _data.CopyTo(chunkTypeAndData[4..]);
-            fs.Write(chunkTypeAndData);
-            return CalculateCrc(chunkTypeAndData);
+            byte[] compressedData;
+            using var stream = new MemoryStream();
+            {
+                using (DeflateStream compressionStream = new(stream, CompressionLevel.Optimal))
+                    compressionStream.Write(_data, 0, _data.Length);
+                compressedData = stream.ToArray();
+            }
+
+            var zlibHeader = ZLibUtilities.GetZLibHeader(CompressionLevel.Optimal);
+            ((uint)(compressedData.Length + ZLibUtilities.ZLibHeaderNumberOfBytes)).WriteUInt32(fs);
+            fs.Write(Attributes.ChunkId.AsSpan(Utilities.ByteOrder.LittleEndian));
+            fs.Write(zlibHeader);
+            fs.Write(compressedData);
+
+            Span<byte> chunkTypeAndData = new(new byte[4 + ZLibUtilities.ZLibHeaderNumberOfBytes + compressedData.Length]);
+            Attributes.ChunkId.AsSpan(ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
+            zlibHeader.CopyTo(chunkTypeAndData[4..]);
+            compressedData.CopyTo(chunkTypeAndData[(4 + ZLibUtilities.ZLibHeaderNumberOfBytes)..]);
+            return Iso3309Crc32.CalculateCrc(chunkTypeAndData);
         }
 
         public override string ToString()

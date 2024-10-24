@@ -1,9 +1,8 @@
+using ImageDecoder.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using ImageDecoder.Common;
 using static ImageDecoder.Common.Utilities;
-using static ImageDecoder.Common.Iso3309Crc32;
 
 namespace ImageDecoder.PngDecoding.Chunks
 {
@@ -105,7 +104,7 @@ namespace ImageDecoder.PngDecoding.Chunks
         protected override uint EncodeChunkTypeAndData(FileStream fs)
         {
             Span<byte> chunkTypeAndData = new(new byte[4 + ChunkNumberOfBytes]);
-            attributes.ChunkId.AsSpan(ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
+            Attributes.ChunkId.AsSpan(ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
 
             var byteIdx = 4;
             Width.AsSpan().CopyTo(chunkTypeAndData[byteIdx..]);
@@ -121,7 +120,7 @@ namespace ImageDecoder.PngDecoding.Chunks
             chunkTypeAndData[byteIdx] = (byte)Interlace;
 
             fs.Write(chunkTypeAndData);
-            return CalculateCrc(chunkTypeAndData);
+            return Iso3309Crc32.CalculateCrc(chunkTypeAndData);
         }
     }
 }
