@@ -12,41 +12,42 @@ namespace ImageDecoder.PngDecoding.Chunks
         
         public ChunkType ChunkType { get; }
 
-        public ChunkAttributes Attributes { get; }
-        
-        public bool IsValid { get; }        
+        public ChunkAttributes Attributes { get; }  
         #endregion
 
         public const int CrcNumberOfBytes = 4;
-        
+
+        private const int LengthTypeNumberOfBytes = 4;
+        private const int ChunkTypeNumberOfBytes = 4;
+
         protected PngFile File { get; }
 
         protected Chunk(uint length, ChunkType chunkType, ChunkAttributes attributes, PngFile file, BinaryReader reader)
         {
-            var data = new ReadOnlySpan<byte>(length == 0 ? [] : reader.ReadBytes((int)length));
-            
-            Span<byte> chunkTypeAndData = new(new byte[4 + data.Length]);
-            attributes.ChunkId.AsSpan(Utilities.ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
-            data.CopyTo(chunkTypeAndData[4..]);
-            
-            IsValid = Iso3309Crc32.VerifyCrc(chunkTypeAndData, Utilities.ReadUInt32(reader.ReadBytes(CrcNumberOfBytes)));
-            if (!IsValid)
-                throw new PngDecodingException("CRC check failed - chunk is corrupt");
-            
             Length = length;
             ChunkType = chunkType;
             Attributes = attributes;
             File = file;
 
             if (ChunkType != ChunkType.IDAT)
-                DecodeChunk(data);
+            {
+                var position = reader.BaseStream.Position;
+                reader.BaseStream.Seek(position - Length - CrcNumberOfBytes, SeekOrigin.Begin);
+                DecodeChunk(reader);
+                _ = reader.BaseStream.Seek(CrcNumberOfBytes, SeekOrigin.Current);
+            }
         }
 
         public static Chunk GetChunk(BinaryReader reader, PngFile file, bool warnOnUnknownChunk = false)
         {
-            var length = new ReadOnlySpan<byte>(reader.ReadBytes(4)).ReadUInt32();
-            var chunkTypeBytes = reader.ReadBytes(4);
+            var length = new ReadOnlySpan<byte>(reader.ReadBytes(LengthTypeNumberOfBytes)).ReadUInt32();
             
+            var chunkTypeStartPosition = reader.BaseStream.Position;
+            var chunkTypeBytes = reader.ReadBytes(ChunkTypeNumberOfBytes);
+
+            // Reset the reader back to where the chunk type starts, as we need that in the CRC calculation
+            reader.BaseStream.Seek(chunkTypeStartPosition, SeekOrigin.Begin);
+
             var (validChunkName, knownChunk) = PngDecoder.TryGetPngChunkType(chunkTypeBytes, out var chunkType);
             var attributes = ChunkTypeAttribute.GetChunkAttributes(chunkTypeBytes);
 
@@ -60,6 +61,13 @@ namespace ImageDecoder.PngDecoding.Chunks
                 else if (warnOnUnknownChunk)
                     Console.WriteLine($"Encountered unknown ancillary chunk '{Encoding.ASCII.GetString(chunkTypeBytes)}'");
             }
+
+            var bytesRemaining = reader.BaseStream.Length - reader.BaseStream.Position;
+            if ((ChunkTypeNumberOfBytes + length + CrcNumberOfBytes) > bytesRemaining)
+                throw new PngDecodingException($"File is too short - expected to read {length} bytes, only {bytesRemaining} bytes left");
+
+            if (!Iso3309Crc32.VerifyCrc(reader, ChunkTypeNumberOfBytes + (int)length, CrcNumberOfBytes))
+                throw new PngDecodingException("CRC check failed - chunk is corrupt");
 
             var chunk = chunkType switch
             {
@@ -75,10 +83,10 @@ namespace ImageDecoder.PngDecoding.Chunks
 
         public override string ToString()
         {
-            return $"{ChunkType} chunk ({Length} bytes, CRC {(IsValid ? "OK" : "Not OK")}) [Critical: {Attributes.IsCritical}, IsPublic: {Attributes.IsPublic}, SafeToCopy: {Attributes.IsSafeToCopy}]";
+            return $"{ChunkType} chunk ({Length} bytes) [Critical: {Attributes.IsCritical}, IsPublic: {Attributes.IsPublic}, SafeToCopy: {Attributes.IsSafeToCopy}]";
         }
 
-        public virtual void DecodeChunk(ReadOnlySpan<byte> data) { return; }
+        public virtual void DecodeChunk(BinaryReader reader) { return; }
 
         public void EncodeChunk(FileStream fs)
         {

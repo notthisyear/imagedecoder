@@ -21,7 +21,7 @@ namespace ImageDecoder.PngDecoding.Chunks
         public byte SignificantAlphaBits { get; private set; }
         #endregion
 
-        public override void DecodeChunk(ReadOnlySpan<byte> data)
+        public override void DecodeChunk(BinaryReader reader)
         {
             var headerChunk = File.TryGetChunkOfType<IHDRChunk>(ChunkType.IHDR);
             if (headerChunk == default)
@@ -32,29 +32,29 @@ namespace ImageDecoder.PngDecoding.Chunks
             {
                 case IHDRChunk.ColorType.Greyscale:
                     AssertDataLength(expectedLength);
-                    SignificantGreyscaleBits = data[0];
+                    SignificantGreyscaleBits = reader.ReadByte();
                     break;
 
                 case IHDRChunk.ColorType.Truecolor:
                 case IHDRChunk.ColorType.IndexedColor:
                     AssertDataLength(expectedLength);
-                    SignificantRedBits = data[0];
-                    SignificantGreenBits = data[1];
-                    SignificantBlueBits = data[2];
+                    SignificantRedBits = reader.ReadByte();
+                    SignificantGreenBits = reader.ReadByte();
+                    SignificantBlueBits = reader.ReadByte();
                     break;
 
                 case IHDRChunk.ColorType.GreyscaleWithAlpha:
                     AssertDataLength(expectedLength);
-                    SignificantGreyscaleBits = data[0];
-                    SignificantAlphaBits = data[1];
+                    SignificantGreyscaleBits = reader.ReadByte();
+                    SignificantAlphaBits = reader.ReadByte();
                     break;
 
                 case IHDRChunk.ColorType.TruecolorWithAlpha:
                     AssertDataLength(expectedLength);
-                    SignificantRedBits = data[0];
-                    SignificantGreenBits = data[1];
-                    SignificantBlueBits = data[2];
-                    SignificantAlphaBits = data[3];
+                    SignificantRedBits = reader.ReadByte();
+                    SignificantGreenBits = reader.ReadByte();
+                    SignificantBlueBits = reader.ReadByte();
+                    SignificantAlphaBits = reader.ReadByte();
                     break;
 
                 default:
@@ -116,7 +116,7 @@ namespace ImageDecoder.PngDecoding.Chunks
         private void AssertDataLength(int actualLength)
         {
             if (Length != actualLength)
-                throw new PngDecodingException($"Unexpected data length in sBIT chunk - expected {actualLength}, got {Length}"); 
+                throw new PngDecodingException($"Unexpected data length in sBIT chunk - expected {actualLength}, got {Length}");
         }
 
         private static int GetExpectedLengthForColorType(IHDRChunk.ColorType type)

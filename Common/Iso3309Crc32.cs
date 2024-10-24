@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace ImageDecoder.Common
 {
@@ -25,18 +26,36 @@ namespace ImageDecoder.Common
             s_tableCreated = true;
         }
 
-        public static bool VerifyCrc(ReadOnlySpan<byte> data, uint expectedCrc)
-            => CalculateCrc(data) == expectedCrc;
+        public static bool VerifyCrc(BinaryReader reader, int length, int expectedCrcLength)
+        {   
+            var crc = CalculateCrc(reader.BaseStream, length);
+            return crc == Utilities.ReadUInt32(reader.ReadBytes(expectedCrcLength));
+        }
 
         public static uint CalculateCrc(ReadOnlySpan<byte> data)
+        {
+            uint crc;
+            using (var ms = new MemoryStream())
+            {
+                ms.Write(data);
+                crc = CalculateCrc(ms, data.Length);
+            }
+            return crc;
+        }
+
+        public static uint CalculateCrc(Stream reader, int length)
         {
             // Note: Based on description in https://www.w3.org/TR/png-3/#D-CRCAppendix
             if (!s_tableCreated)
                 CreateCrcTable();
 
             uint crc = 0xffffffff;
-            for (var i = 0; i < data.Length; i++)
-                crc = s_crcTable[(crc ^ data[i]) & 0xff] ^ crc >> 8;
+            var i = 0;
+            while (i < length)
+            {
+                crc = s_crcTable[(crc ^ reader.ReadByte()) & 0xff] ^ crc >> 8;
+                i++;
+            }
 
             return crc ^ 0xffffffff;
         }

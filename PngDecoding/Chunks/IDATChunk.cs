@@ -11,13 +11,13 @@ namespace ImageDecoder.PngDecoding.Chunks
     {
         private byte[] _data = [];
 
-        public override void DecodeChunk(ReadOnlySpan<byte> data)
+        public override void DecodeChunk(BinaryReader reader)
         {
-            ZLibUtilities.ValidateZLibHeader(data);
+            ZLibUtilities.ValidateZLibHeader(reader);
             using var decompressedStream = new MemoryStream();
             using var decompressor =
                 new DeflateStream(
-                    new MemoryStream(data[ZLibUtilities.ZLibHeaderNumberOfBytes..].ToArray()),
+                    new MemoryStream(reader.ReadBytes((int)Length)),
                     CompressionMode.Decompress);
             decompressor.CopyTo(decompressedStream);
             _data = decompressedStream.ToArray();

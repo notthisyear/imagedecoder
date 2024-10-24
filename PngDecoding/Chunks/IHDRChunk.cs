@@ -79,11 +79,12 @@ namespace ImageDecoder.PngDecoding.Chunks
 
         private const int ChunkNumberOfBytes = 13;
 
-        public override void DecodeChunk(ReadOnlySpan<byte> data)
+        public override void DecodeChunk(BinaryReader reader)
         {
             if (Length < ChunkNumberOfBytes)
                 throw new PngDecodingException($"IHDR chunk has incorrect length - expected {ChunkNumberOfBytes} bytes, got {Length}");
-            
+
+            ReadOnlySpan<byte> data = reader.ReadBytes((int)Length);
             Width = data[0..4].ReadUInt32();
             Height = data[4..8].ReadUInt32();
             BitDepth = data[8];

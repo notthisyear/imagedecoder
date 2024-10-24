@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.IO.Compression;
 
 namespace ImageDecoder.Common
@@ -11,6 +12,14 @@ namespace ImageDecoder.Common
         private const byte ZlibCompressionInformation = 0x07; // Denotes 32K windows size for LZ77
 
         // See https://www.rfc-editor.org/rfc/rfc1950 for zlib header specification
+        public static void ValidateZLibHeader(BinaryReader reader)
+        {
+            var bytesLeftInStream = reader.BaseStream.Length - reader.BaseStream.Position;
+            if (bytesLeftInStream < ZLibHeaderNumberOfBytes)
+                throw new InvalidOperationException($"Expected {ZLibHeaderNumberOfBytes} bytes for zlib header, only {bytesLeftInStream} bytes left");
+            ValidateZLibHeader(reader.ReadBytes(ZLibHeaderNumberOfBytes));
+        }
+
         public static void ValidateZLibHeader(ReadOnlySpan<byte> header)
         {
             if (header.Length < ZLibHeaderNumberOfBytes)
