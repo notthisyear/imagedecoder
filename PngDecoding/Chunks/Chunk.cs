@@ -48,13 +48,19 @@ namespace ImageDecoder.PngDecoding.Chunks
             var chunkTypeBytes = reader.ReadBytes(4);
             
             var (validChunkName, knownChunk) = PngDecoder.TryGetPngChunkType(chunkTypeBytes, out var chunkType);
+            var attributes = ChunkTypeAttribute.GetChunkAttributes(chunkTypeBytes);
+
             if (!validChunkName)
                 throw new PngDecodingException($"Encountered invalid chunk type name '{Encoding.ASCII.GetString(chunkTypeBytes)}'");
-            
-            if (!knownChunk && warnOnUnknownChunk)
-                Console.WriteLine($"Encountered unknown chunk type name '{Encoding.ASCII.GetString(chunkTypeBytes)}'");
 
-            var attributes = ChunkTypeAttribute.GetChunkAttributes(chunkTypeBytes);
+            if (!knownChunk)
+            {
+                if (attributes.IsCritical)
+                    throw new PngDecodingException($"Encountered unknown critical chunk '{Encoding.ASCII.GetString(chunkTypeBytes)}'");
+                else if (warnOnUnknownChunk)
+                    Console.WriteLine($"Encountered unknown ancillary chunk '{Encoding.ASCII.GetString(chunkTypeBytes)}'");
+            }
+
             var chunk = chunkType switch
             {
                 ChunkType.IHDR => new IHDRChunk(length, chunkType, attributes, file, reader),
