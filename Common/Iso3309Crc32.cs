@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace ImageDecoder.Common
@@ -27,7 +27,7 @@ namespace ImageDecoder.Common
         }
 
         public static bool VerifyCrc(BinaryReader reader, int length, int expectedCrcLength)
-        {   
+        {
             var crc = CalculateCrc(reader.BaseStream, length);
             return crc == Utilities.ReadUInt32(reader.ReadBytes(expectedCrcLength));
         }

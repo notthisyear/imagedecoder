@@ -1,18 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
+	  <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+	  <AnalysisLevel>latest-recommended</AnalysisLevel>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Update="image.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="image2.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <EditorConfigFiles Remove="C:\Users\programming\C#\imagedecoder\.editorconfig" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="C:\Users\programming\C#\imagedecoder\.editorconfig" />
+  </ItemGroup>
+	
 </Project>

@@ -1,6 +1,7 @@
-using ImageDecoder.Common;
+﻿using ImageDecoder.Common;
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 
 namespace ImageDecoder.PngDecoding.Chunks
@@ -73,7 +74,7 @@ namespace ImageDecoder.PngDecoding.Chunks
         {
             var headerChunk = File.TryGetChunkOfType<IHDRChunk>(ChunkType.IHDR)!;
             var dataLength = GetExpectedLengthForColorType(headerChunk.Color);
-            
+
             Span<byte> chunkTypeAndData = new(new byte[4 + dataLength]);
             Attributes.ChunkId.AsSpan(Utilities.ByteOrder.LittleEndian).CopyTo(chunkTypeAndData);
 
@@ -130,6 +131,6 @@ namespace ImageDecoder.PngDecoding.Chunks
             };
 
         private static string ValueOrX(byte b)
-            => b == 0 ? "x" : b.ToString(); 
+            => b == 0 ? "x" : b.ToString(CultureInfo.InvariantCulture);
     }
 }

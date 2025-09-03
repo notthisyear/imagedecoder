@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 
@@ -6,7 +6,8 @@ namespace ImageDecoder.Common
 {
     internal static class Utilities
     {
-        public enum ByteOrder{
+        public enum ByteOrder
+        {
             LittleEndian,
             BigEndian,
         }
@@ -37,7 +38,7 @@ namespace ImageDecoder.Common
 
             byte shift = byteOrder == ByteOrder.BigEndian ? (byte)24 : (byte)0;
             int change = byteOrder == ByteOrder.BigEndian ? -8 : 8;
-            
+
             uint result = 0;
             foreach (var b in bytes)
             {
@@ -51,13 +52,49 @@ namespace ImageDecoder.Common
         {
             byte shift = byteOrder == ByteOrder.BigEndian ? (byte)24 : (byte)0;
             int change = byteOrder == ByteOrder.BigEndian ? -8 : 8;
-            
+
             for (var i = 0; i < 4; i++)
             {
                 var v = (byte)((value & ((uint)0xff << shift)) >> shift);
                 fs.WriteByte(v);
                 shift = (byte)(shift + change);
             }
+        }
+
+        public static ReadOnlySpan<byte> EncodeUInt16(this ushort value, ByteOrder byteOrder = ByteOrder.BigEndian)
+        {
+            var result = new byte[2];
+            result[0] = (byte)(value & (ushort)(0xff << (byteOrder == ByteOrder.LittleEndian ? 0 : 8)));
+            result[1] = (byte)(value & (ushort)(0xff << (byteOrder == ByteOrder.LittleEndian ? 8 : 0)));
+            return result;
+        }
+
+        public static ReadOnlySpan<byte> EncodeUInt32(this uint value, ByteOrder byteOrder = ByteOrder.BigEndian)
+        {
+            byte shift = byteOrder == ByteOrder.BigEndian ? (byte)24 : (byte)0;
+            int change = byteOrder == ByteOrder.BigEndian ? -8 : 8;
+            var result = new byte[4];
+            for (var i = 0; i < 4; i++)
+            {
+                var v = (byte)((value & ((uint)0xff << shift)) >> shift);
+                result[i] = v;
+                shift = (byte)(shift + change);
+            }
+            return result;
+        }
+
+        public static ReadOnlySpan<byte> EncodeInt32(this int value, ByteOrder byteOrder = ByteOrder.BigEndian)
+        {
+            byte shift = byteOrder == ByteOrder.BigEndian ? (byte)24 : (byte)0;
+            int change = byteOrder == ByteOrder.BigEndian ? -8 : 8;
+            var result = new byte[4];
+            for (var i = 0; i < 4; i++)
+            {
+                var v = (byte)((value & ((uint)0xff << shift)) >> shift);
+                result[i] = v;
+                shift = (byte)(shift + change);
+            }
+            return result;
         }
 
         public static Span<byte> AsSpan(this uint value, ByteOrder byteOrder = ByteOrder.BigEndian)
@@ -80,7 +117,7 @@ namespace ImageDecoder.Common
             enumValue = default;
             if (typeof(TIn) != Enum.GetUnderlyingType(typeof(TOut)))
                 return false;
-            
+
             if (v == null)
                 return false;
 
@@ -90,6 +127,6 @@ namespace ImageDecoder.Common
                 return true;
             }
             return false;
-        }   
+        }
     }
 }

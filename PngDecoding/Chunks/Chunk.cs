@@ -1,4 +1,4 @@
-using ImageDecoder.Common;
+﻿using ImageDecoder.Common;
 using System;
 using System.IO;
 using System.Text;
@@ -9,10 +9,10 @@ namespace ImageDecoder.PngDecoding.Chunks
     {
         #region Public properties
         public uint Length { get; }
-        
+
         public ChunkType ChunkType { get; }
 
-        public ChunkAttributes Attributes { get; }  
+        public ChunkAttributes Attributes { get; }
         #endregion
 
         public const int CrcNumberOfBytes = 4;
@@ -41,7 +41,7 @@ namespace ImageDecoder.PngDecoding.Chunks
         public static Chunk GetChunk(BinaryReader reader, PngFile file, bool warnOnUnknownChunk = false)
         {
             var length = new ReadOnlySpan<byte>(reader.ReadBytes(LengthTypeNumberOfBytes)).ReadUInt32();
-            
+
             var chunkTypeStartPosition = reader.BaseStream.Position;
             var chunkTypeBytes = reader.ReadBytes(ChunkTypeNumberOfBytes);
 
@@ -79,14 +79,14 @@ namespace ImageDecoder.PngDecoding.Chunks
             };
 
             return chunk;
-        }        
+        }
 
         public override string ToString()
         {
             return $"{ChunkType} chunk ({Length} bytes) [Critical: {Attributes.IsCritical}, IsPublic: {Attributes.IsPublic}, SafeToCopy: {Attributes.IsSafeToCopy}]";
         }
 
-        public virtual void DecodeChunk(BinaryReader reader) { return; }
+        public virtual void DecodeChunk(BinaryReader reader) { _ = reader.ReadBytes((int)Length); }
 
         public void EncodeChunk(FileStream fs)
         {
@@ -106,7 +106,7 @@ namespace ImageDecoder.PngDecoding.Chunks
             Attributes.ChunkId.WriteUInt32(fs, Utilities.ByteOrder.LittleEndian);
             return Iso3309Crc32.CalculateCrc(Attributes.ChunkId.AsSpan(Utilities.ByteOrder.LittleEndian));
         }
-        
+
         protected static T GetValueFromByte<T>(byte b) where T : Enum
         {
             if (!Utilities.TryGetAsEnum(b, out T? t))

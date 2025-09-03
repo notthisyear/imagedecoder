@@ -1,4 +1,4 @@
-using ImageDecoder.Common;
+﻿using ImageDecoder.Common;
 using ImageDecoder.PngDecoding.Chunks;
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ namespace ImageDecoder.PngDecoding
         {
             if (!File.Exists(path))
                 throw new PngDecodingException($"Could not find file '{path}'");
-            
+
             using var stream = File.Open(path, FileMode.Open, FileAccess.Read);
             using BinaryReader reader = new(stream);
 
@@ -61,7 +61,7 @@ namespace ImageDecoder.PngDecoding
 
         private static void PopulateChunkAttributeCache()
         {
-            foreach (ChunkType t in Enum.GetValues(typeof(ChunkType)))
+            foreach (var t in Enum.GetValues<ChunkType>())
             {
                 if (t == ChunkType.Unknown)
                     continue;

@@ -1,6 +1,4 @@
-﻿
-
-using ImageDecoder.PngDecoding;
+﻿using ImageDecoder.PngDecoding;
 using System;
 
 namespace ImageDecoder
@@ -10,12 +8,14 @@ namespace ImageDecoder
         public static void Main(string[] args)
         {
             if (args.Length == 0)
-                args = ["image2.png"];
+                args = ["image.png"];
 
             var imageToRead = args[0];
             Console.WriteLine($"Decoding file '{imageToRead}'...");
             var file = PngDecoder.Decode(imageToRead, true);
-            file.EncodeAndWrite("image_out.png");
+
+            file.DumpScanlineFilters();
+            file.DumpImageDataAsBmp("image_test.bmp");
         }
     }
 }

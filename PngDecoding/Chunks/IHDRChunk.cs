@@ -11,36 +11,38 @@ namespace ImageDecoder.PngDecoding.Chunks
     {
         #region Enums
         [AttributeUsage(AttributeTargets.Field)]
-        private class ColorHeaderFieldAttribute : Attribute
+        private sealed class ColorHeaderFieldAttribute : Attribute
         {
+            public int NumberOfComponents { get; }
             private readonly List<byte> _allowedBitDepths;
-            
-            public ColorHeaderFieldAttribute(params byte[] allowedBitDepths)
+
+            public ColorHeaderFieldAttribute(int numberOfComponents, params byte[] allowedBitDepths)
             {
+                NumberOfComponents = numberOfComponents;
                 _allowedBitDepths = [];
                 for (var i = 0; i < allowedBitDepths.Length; i++)
-                    _allowedBitDepths.Add(allowedBitDepths[i]);   
+                    _allowedBitDepths.Add(allowedBitDepths[i]);
             }
 
             public bool BitDepthValid(byte depth)
-                => _allowedBitDepths.Contains(depth); 
+                => _allowedBitDepths.Contains(depth);
         }
-        
+
         public enum ColorType : byte
         {
-            [ColorHeaderField(1, 2, 4, 8, 16)]
+            [ColorHeaderField(numberOfComponents: 1, 1, 2, 4, 8, 16)]
             Greyscale = 0x00,
-            
-            [ColorHeaderField(8, 16)]
+
+            [ColorHeaderField(numberOfComponents: 3, 8, 16)]
             Truecolor = 0x02,
-            
-            [ColorHeaderField(1, 2, 4, 8)]
+
+            [ColorHeaderField(numberOfComponents: 1, 1, 2, 4, 8)]
             IndexedColor = 0x03,
 
-            [ColorHeaderField(8, 16)]
+            [ColorHeaderField(numberOfComponents: 2, 8, 16)]
             GreyscaleWithAlpha = 0x04,
-            
-            [ColorHeaderField(8, 16)]
+
+            [ColorHeaderField(numberOfComponents: 4, 8, 16)]
             TruecolorWithAlpha = 0x06
         };
 
@@ -61,13 +63,17 @@ namespace ImageDecoder.PngDecoding.Chunks
         };
 
         public uint Width { get; private set; }
+
+        public int ComponentsPerPixel { get; private set; }
+
+        public bool RequiresPLTEChunk { get; private set; }
         #endregion
 
         #region Public properties
         public uint Height { get; private set; }
 
         public byte BitDepth { get; private set; }
-         
+
         public ColorType Color { get; private set; }
 
         public CompressionMethod Compression { get; private set; }
@@ -88,7 +94,7 @@ namespace ImageDecoder.PngDecoding.Chunks
             Width = data[0..4].ReadUInt32();
             Height = data[4..8].ReadUInt32();
             BitDepth = data[8];
-           
+
             Color = GetValueFromByte<ColorType>(data[9]);
             Compression = GetValueFromByte<CompressionMethod>(data[10]);
             Filter = GetValueFromByte<FilterMethod>(data[11]);
@@ -97,6 +103,13 @@ namespace ImageDecoder.PngDecoding.Chunks
             var (attr, _) = Color.GetCustomAttributeFromEnum<ColorHeaderFieldAttribute>();
             if (!attr!.BitDepthValid(BitDepth))
                 throw new PngDecodingException($"Invalid bit depth ({BitDepth}) specified for color type {Color})");
+
+            ComponentsPerPixel = attr.NumberOfComponents;
+
+            if (Filter != FilterMethod.AdaptiveFiltering)
+                throw new PngDecodingException($"Unknown filter method '{Filter}'");
+
+            RequiresPLTEChunk = Color == ColorType.IndexedColor;
         }
 
         public override string ToString()

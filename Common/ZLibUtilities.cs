@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.IO.Compression;
 
@@ -62,6 +62,6 @@ namespace ImageDecoder.Common
             header[1] = flgByte;
             return header;
         }
-        
+
     }
 }

@@ -23,6 +23,9 @@ namespace ImageDecoder.PngDecoding.Chunks
             _data = decompressedStream.ToArray();
         }
 
+        public ReadOnlySpan<byte> GetData()
+            => _data;
+
         protected override uint EncodeChunkTypeAndData(FileStream fs)
         {
             byte[] compressedData;
@@ -35,7 +38,7 @@ namespace ImageDecoder.PngDecoding.Chunks
 
             var zlibHeader = ZLibUtilities.GetZLibHeader(CompressionLevel.Optimal);
             ((uint)(compressedData.Length + ZLibUtilities.ZLibHeaderNumberOfBytes)).WriteUInt32(fs);
-            fs.Write(Attributes.ChunkId.AsSpan(Utilities.ByteOrder.LittleEndian));
+            fs.Write(Attributes.ChunkId.AsSpan(ByteOrder.LittleEndian));
             fs.Write(zlibHeader);
             fs.Write(compressedData);
 
